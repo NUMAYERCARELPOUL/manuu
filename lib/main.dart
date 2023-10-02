@@ -7,6 +7,9 @@ import 'package:untitled13/screens/authentication.dart';
 import 'package:untitled13/screens/home_screen.dart';
 import 'firebase_options.dart';
 import 'model/cartmodel.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -23,6 +26,7 @@ void main() async {
     ),
   );
 }
+
 class MyApp extends StatelessWidget {
   const MyApp({Key? key});
   @override
@@ -34,8 +38,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
-      home:  authentication(),
-
+      home: Authentication(),
     );
   }
 }
