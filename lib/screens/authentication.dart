@@ -26,11 +26,10 @@ class _AuthenticationState extends State<Authentication> {
 
         return user;
       } else {
-        // Handle the case where the user canceled the sign-in or didn't select an account.
+
         return null;
       }
     } catch (error) {
-      // Handle any errors that occur during the sign-in process.
       print(error);
       return null;
     }
@@ -46,7 +45,6 @@ class _AuthenticationState extends State<Authentication> {
         ),
       );
     } else {
-      // Handle the case where the user canceled the sign-in or there was an error.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Sign-in was canceled or there was an error.'),
@@ -54,10 +52,6 @@ class _AuthenticationState extends State<Authentication> {
       );
     }
   }
-
-
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,8 +64,8 @@ class _AuthenticationState extends State<Authentication> {
             Center(
               child: SizedBox(
                 height: 140,
-                child: Image.network(
-                    "https://www.gstatic.com/devrel-devsite/prod/v47c000584df8fd5ed12554bcabcc16cd4fd28aee940bdc8ae9e35cab77cbb7da/firebase/images/touchicon-180.png"),
+                child: Image.asset(
+                  "assets/touchicon-180.png"),
               ),
             ),
             SizedBox(
@@ -89,8 +83,8 @@ class _AuthenticationState extends State<Authentication> {
                     children: [
                       SizedBox(
                         height: 20,
-                        child: Image.network(
-                            "https://www.transparentpng.com/thumb/google-logo/google-logo-png-icon-free-download-SUF63j.png"),
+                        child: Image.asset(
+                            "assets/google.png"),
                       ),
                       SizedBox(
                         width: 70,
@@ -117,8 +111,8 @@ class _AuthenticationState extends State<Authentication> {
                   children: [
                     SizedBox(
                       height: 20,
-                      child: Image.network(
-                          "https://i.pinimg.com/originals/84/4e/8c/844e8cd4ab26c82286238471f0e5a901.png"),
+                      child: Image.asset(
+                          "assets/phone.png"),
                     ),
                     SizedBox(
                       width: 70,

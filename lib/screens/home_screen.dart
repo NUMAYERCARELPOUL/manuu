@@ -1,15 +1,18 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:untitled13/screens/drawer.dart';
-import 'package:untitled13/screens/tab_view/salad.dart';
 import '../model/cartmodel.dart';
 import 'cart.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+
+  final List<Map<String, dynamic>> selectedProducts = [];
+
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -35,7 +38,7 @@ class _HomePageState extends State<HomePage> {
     fetchDataFromAPI();
   }
 
-  Future<void> fetchDataFromAPI() async {
+  Future<List<Map<String, dynamic>>> fetchDataFromAPI() async {
     final apiUrl = Uri.parse('https://www.mocky.io/v2/5dfccffc310000efc8d2c1ad');
 
     try {
@@ -44,17 +47,23 @@ class _HomePageState extends State<HomePage> {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData != null && jsonData is List) {
-          setState(() {
-            dishData = List<Map<String, dynamic>>.from(jsonData);
-          });
+          return List<Map<String, dynamic>>.from(jsonData);
         } else {
           throw Exception('API response is not a valid JSON array');
         }
       } else {
-        throw Exception('Failed to load data');
+        throw Exception('Failed to load data. Status Code: ${response.statusCode}');
       }
-    } catch (error) {
-      print('Error: $error');
+    } catch (e) {
+      if (e is SocketException) {
+        print('Error: No internet connection');
+      } else if (e is TimeoutException) {
+        print('Error: Request timed out');
+      } else {
+        print('Error: $e');
+      }
+      // Return an empty list or handle the error as needed.
+      return [];
     }
   }
 
@@ -90,8 +99,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartModel>(context);
@@ -107,7 +114,7 @@ class _HomePageState extends State<HomePage> {
                     return IconButton(
                       icon: Icon(Icons.shopping_cart),
                       onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => CheckoutScreen(selectedProducts: selectedProducts)));
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => CheckoutScreen(selectedProducts: widget.selectedProducts)));
                       },
                     );
                   },
@@ -150,7 +157,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         drawer: MyDrawer(),
-        body:  FutureBuilder(
+        body: FutureBuilder<List<Map<String, dynamic>>>(
           future: fetchDataFromAPI(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -167,18 +174,19 @@ class _HomePageState extends State<HomePage> {
               // Data has been fetched, build the TabBarView
               return TabBarView(
                 children: [
-                  buildTab1Content(),
+                  buildTab1Content(snapshot.data ?? []), // Pass the data to buildTab1Content
                   buildTab2Content(),
                   buildTab3Content(),
                 ],
               );
             }
           },
-        ),
+        )
+
       ),
     );
   }
-  Widget buildTab1Content() {
+  Widget buildTab1Content(List<Map<String, dynamic>> data) {
     if (dishData.isEmpty) {
       // Display a loading indicator or error message
       return Center(
@@ -186,7 +194,7 @@ class _HomePageState extends State<HomePage> {
       );
     }
     return ListView.builder(
-      itemCount: dishData.length,
+      itemCount: widget.selectedProducts.length,
       itemBuilder: (BuildContext context, int index) {
         final dish = dishData[index];
         final List<String> imageUrls = List<String>.from(dish['imageUrls']);
@@ -317,355 +325,4 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-}
-
-class JsonModel {
-  final String restaurantId;
-  final String restaurantName;
-  final String restaurantImage;
-  final String tableId;
-  final String tableName;
-  final String branchName;
-  final String nexturl;
-  final List<TableMenuList> tableMenuList;
-
-  JsonModel({
-    required this.restaurantId,
-    required this.restaurantName,
-    required this.restaurantImage,
-    required this.tableId,
-    required this.tableName,
-    required this.branchName,
-    required this.nexturl,
-    required this.tableMenuList,
-  });
-}
-
-class TableMenuList {
-  final String menuCategory;
-  final String menuCategoryId;
-  final String menuCategoryImage;
-  final String nexturl;
-  final List<CategoryDish> categoryDishes;
-
-  TableMenuList({
-    required this.menuCategory,
-    required this.menuCategoryId,
-    required this.menuCategoryImage,
-    required this.nexturl,
-    required this.categoryDishes,
-  });
-}
-
-class AddonCat {
-  final String addonCategory;
-  final String addonCategoryId;
-  final int addonSelection;
-  final String nexturl;
-  final List<CategoryDish> addons;
-
-  AddonCat({
-    required this.addonCategory,
-    required this.addonCategoryId,
-    required this.addonSelection,
-    required this.nexturl,
-    required this.addons,
-  });
-}
-
-class CategoryDish {
-  final String dishId;
-  final String dishName;
-  final double dishPrice;
-  final String dishImage;
-  final DishCurrency dishCurrency;
-  final int dishCalories;
-  final String dishDescription;
-  final bool dishAvailability;
-  final int dishType;
-  final String? nexturl;
-  final List<AddonCat>? addonCat;
-
-  CategoryDish({
-    required this.dishId,
-    required this.dishName,
-    required this.dishPrice,
-    required this.dishImage,
-    required this.dishCurrency,
-    required this.dishCalories,
-    required this.dishDescription,
-    required this.dishAvailability,
-    required this.dishType,
-    this.nexturl,
-    this.addonCat,
-  });
-}
-
-enum DishCurrency {
-  SAR,
-}
-class CheckoutScreen extends StatefulWidget {
-  final List<Map<String, dynamic>> selectedProducts;
-
-  const CheckoutScreen({required this.selectedProducts});
-
-  @override
-  State<CheckoutScreen> createState() => _CheckoutScreenState();
-}
-
-class _CheckoutScreenState extends State<CheckoutScreen> {
-  final List<Map<String, dynamic>> dishData = [];
-
-  // Define a list of colors for the leading icons
-  final List<Color> leadingIconColors = [
-    Colors.red,
-    Colors.blue,
-    Colors.green,
-    Colors.orange,
-    Colors.purple,
-  ];
-
-  double get totalAmount {
-    double total = 0.0;
-    for (var dish in dishData) {
-      total += dish['count'] * double.parse(dish['price'].replaceAll('INR ', ''));
-    }
-    return total;
-  }
-
-  int calculateSelectedDishesCount() {
-    int count = 0;
-    for (final dish in dishData) {
-      if (dish['count'] > 0) {
-        count++;
-      }
-    }
-    return count;
-  }
-
-  List<Widget> buildSelectedDishesWidgets() {
-    List<Widget> selectedDishesWidgets = [];
-
-    for (final dish in dishData) {
-      if (dish['count'] > 0) {
-        selectedDishesWidgets.add(
-          Padding(
-            padding: EdgeInsets.only(right: 8.0), // Adjust spacing as needed
-            child: Text(
-              '${dish['title']} (${dish['count']}x)',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        );
-      }
-    }
-
-    return selectedDishesWidgets;
-  }
-
-  int calculateTotalDishItemsCount() {
-    int totalCount = 0;
-    for (final dish in dishData) {
-      final countValue = dish['count'];
-      if (countValue is int) {
-        totalCount += countValue;
-      } else if (countValue is double) {
-        totalCount += countValue.toInt();
-      } else if (countValue is String) {
-        totalCount += int.tryParse(countValue) ?? 0;
-      }
-    }
-    return totalCount;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Order Summary"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.only(right: 10, left: 10, bottom: 10),
-        child: Expanded(
-          child: Card(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Container(
-                    height: 50, // Adjust the height as needed
-                    color: Colors.green[900], // Change the color to your desired one
-                    child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            ' ${calculateSelectedDishesCount()} Dishes',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            "-",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          Text(
-                            '${calculateTotalDishItemsCount()} Items',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: widget.selectedProducts.length, // Use widget.selectedProducts
-                    itemBuilder: (BuildContext context, int index) {
-                      final leadingIconColor =
-                      leadingIconColors[index % leadingIconColors.length];
-                      final product = widget.selectedProducts[index]; // Use widget.selectedProducts
-
-                      return Column(
-                        children: [
-                          ListTile(
-                            leading: CircleAvatar(
-                              radius: 7,
-                              backgroundColor: leadingIconColor,
-                              child: Icon(
-                                Icons.adjust_rounded,
-                                size: 10,
-                                color: Colors.white,
-                              ),
-                            ),
-                            title: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  product['title'], // Use product from widget.selectedProducts
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(product['price']), // Use product from widget.selectedProducts
-                                    Text(product['calories']), // Use product from widget.selectedProducts
-                                  ],
-                                ),
-                              ],
-                            ),
-                            trailing: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 110,
-                                  height: 40,
-                                  margin: EdgeInsets.only(bottom: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green[900],
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(Icons.remove),
-                                        color: Colors.white,
-                                        onPressed: () {
-                                          // Handle subtraction
-                                          setState(() {
-                                            if (product['count'] > 0) {
-                                              product['count']--;
-                                            }
-                                          });
-                                        },
-                                      ),
-                                      Text(
-                                        product['count'].toString(),
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(Icons.add),
-                                        color: Colors.white,
-                                        onPressed: () {
-                                          // Handle addition
-                                          setState(() {
-                                            product['count']++;
-                                          });
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Divider(), // Add a Divider between ListTiles
-                        ],
-                      );
-                    },
-                  ),
-                ),
-                ListTile(
-                  title: Text(
-                    'Total Amount',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  trailing: Text(
-                    'INR ${totalAmount.toStringAsFixed(2)}', // Format the total amount
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(primary: Colors.green[900]),
-          onPressed: () {
-            // Show a confirmation dialog
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AlertDialog(
-                  title: Text('Order Confirmation'),
-                  content: Text('Order successfully placed!'),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        // Clear selected products and navigate to the homepage
-                        Navigator.of(context).pop(); // Close the dialog
-                        Navigator.of(context).pop(); // Pop the checkout screen
-                      },
-                      child: Text('OK'),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-          child: Text('Place Order', style: TextStyle(color: Colors.white)),
-        ),
-      ),
-    );
-  }
 }
